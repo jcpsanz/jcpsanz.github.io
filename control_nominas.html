@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control Nóminas</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f0;color:#1a1a1a;font-size:14px}
+.wrap{max-width:1100px;margin:0 auto;padding:1rem}
+h1{font-size:18px;font-weight:500;margin-bottom:1.25rem}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.mes-sel{display:flex;align-items:center;gap:8px;font-size:13px;color:#666}
+select,input[type=text]{border:1px solid #ddd;border-radius:6px;padding:5px 8px;font-size:13px;background:#fff;color:#1a1a1a}
+select:focus,input[type=text]:focus{outline:none;border-color:#999}
+button{border:1px solid #ccc;border-radius:6px;padding:5px 12px;font-size:13px;background:#fff;color:#1a1a1a;cursor:pointer}
+button:hover{background:#f0f0f0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.stat{background:#fff;border-radius:8px;padding:.75rem 1rem;border:1px solid #e8e8e8}
+.stat .lbl{font-size:11px;color:#888;margin-bottom:4px}
+.stat .val{font-size:22px;font-weight:500}
+.val.ok{color:#2d7a3a}
+.val.warn{color:#b86a00}
+.val.err{color:#cc3333}
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.toolbar input[type=text]{flex:1;min-width:160px}
+.bloque{margin-bottom:2rem}
+.bloque-header{display:flex;align-items:center;gap:10px;margin-bottom:.5rem;flex-wrap:wrap}
+.bloque-title{font-size:14px;font-weight:500}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px}
+.badge-auto{background:#fff3cd;color:#856404}
+.badge-ss{background:#d0e8ff;color:#0d5fab}
+.badge-hogar{background:#d4edda;color:#155724}
+.cnt{font-size:12px;color:#888}
+.table-wrap{border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;min-width:400px}
+th{background:#f8f8f6;padding:7px 8px;text-align:center;font-weight:500;font-size:11px;color:#666;border-bottom:1px solid #e0e0e0;white-space:nowrap}
+th.left{text-align:left}
+td{padding:6px 8px;border-bottom:1px solid #eeeeee;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.chip{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:15px;border:none;background:transparent;transition:transform .1s}
+.chip:hover{transform:scale(1.15)}
+.chip.pend{background:#e8e8e8}
+.chip.ok{background:#c3e6cb}
+.chip.parcial{background:#ffeaa7}
+.del-btn{background:none;border:none;cursor:pointer;color:#aaa;font-size:14px;padding:3px 5px;border-radius:4px}
+.del-btn:hover{color:#cc3333}
+.progress-bar{height:4px;background:#e8e8e8;border-radius:2px;margin-top:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;transition:width .3s}
+.pct{font-size:11px;color:#888}
+.importe-input{width:85px;font-size:12px;text-align:right;border:1px solid #ddd;border-radius:4px;padding:3px 5px;background:#fff}
+.importe-input:focus{outline:none;border-color:#999}
+.add-form{display:none;background:#f8f8f6;border-radius:8px;padding:.85rem;margin-bottom:1rem;gap:8px;flex-wrap:wrap;align-items:flex-end;border:1px solid #e8e8e8}
+.add-form.open{display:flex}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:1rem;align-items:center}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#666}
+.leg-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0}
+.dot-pend{background:#e8e8e8;border:1px solid #ccc}
+.dot-parcial{background:#ffeaa7;border:1px solid #f0c040}
+.dot-ok{background:#c3e6cb;border:1px solid #82c991}
+.hint{font-size:11px;color:#aaa;margin-left:auto}
+@media(max-width:600px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .top-bar{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="top-bar">
+  <h1>Control mensual de nóminas</h1>
+  <div class="mes-sel">
+    <label>Mes:</label>
+    <select id="mesSelect"></select>
+    <select id="anioSelect"></select>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="toolbar">
+  <input type="text" id="buscar" placeholder="Buscar empresa...">
+  <select id="filtroEstado">
+    <option value="todas">Todas</option>
+    <option value="pendientes">Con pendientes</option>
+    <option value="completas">Completadas</option>
+  </select>
+  <button onclick="toggleForm()">+ Nueva empresa</button>
+</div>
+
+<div class="add-form" id="addForm">
+  <input type="text" id="nuevaCod" placeholder="Cód." style="width:55px">
+  <input type="text" id="nuevaEmp" placeholder="Nombre empresa" maxlength="60" style="flex:1;min-width:160px">
+  <select id="nuevoTipo">
+    <option value="autonomo">Autónomo (solo nómina)</option>
+    <option value="hogar">Empleada de hogar</option>
+    <option value="completo">Con seguros sociales</option>
+  </select>
+  <button onclick="addEmpresa()">Añadir</button>
+  <button onclick="toggleForm()" style="opacity:.6">Cancelar</button>
+</div>
+
+<!-- BLOQUE 1 -->
+<div class="bloque">
+  <div class="bloque-header">
+    <div class="bloque-title">Nóminas autónomo</div>
+    <span class="badge badge-auto">Solo nómina y envío</span>
+    <span class="cnt" id="cnt-auto"></span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th class="left" style="width:6%">Cód.</th>
+        <th class="left" style="width:52%">Empresa</th>
+        <th style="width:14%">Elaboración</th>
+        <th style="width:14%">Envío</th>
+        <th style="width:9%">Avance</th>
+        <th style="width:5%"></th>
+      </tr></thead>
+      <tbody id="tbody-auto"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BLOQUE 2 -->
+<div class="bloque">
+  <div class="bloque-header">
+    <div class="bloque-title">Empleadas de hogar</div>
+    <span class="badge badge-hogar">Solo nómina y envío</span>
+    <span class="cnt" id="cnt-hogar"></span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th class="left" style="width:6%">Cód.</th>
+        <th class="left" style="width:52%">Cliente</th>
+        <th style="width:14%">Elaboración</th>
+        <th style="width:14%">Envío</th>
+        <th style="width:9%">Avance</th>
+        <th style="width:5%"></th>
+      </tr></thead>
+      <tbody id="tbody-hogar"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BLOQUE 3 -->
+<div class="bloque">
+  <div class="bloque-header">
+    <div class="bloque-title">Nóminas + seguros sociales</div>
+    <span class="badge badge-ss">Ciclo completo</span>
+    <span class="cnt" id="cnt-ss"></span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th class="left" style="width:5%">Cód.</th>
+        <th class="left" style="width:20%">Empresa</th>
+        <th style="width:9%">Elaboración</th>
+        <th style="width:9%">Envío</th>
+        <th style="width:9%">Bases</th>
+        <th style="width:9%">Confirmación</th>
+        <th style="width:11%">Importe SS</th>
+        <th style="width:9%">Fich. CRA</th>
+        <th style="width:7%">Avance</th>
+        <th style="width:4%"></th>
+      </tr></thead>
+      <tbody id="tbody-ss"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="leg-item"><div class="leg-dot dot-pend"></div>Pendiente</div>
+  <div class="leg-item"><div class="leg-dot dot-parcial"></div>En proceso</div>
+  <div class="leg-item"><div class="leg-dot dot-ok"></div>Completado</div>
+  <span class="hint">Toca los círculos para cambiar el estado</span>
+</div>
+
+</div>
+
+<script>
+const FASES_SIMPLE=['elaboracion','envio'];
+const FASES_SS=['elaboracion','envio','bases','confirmacion','ficheros_cra'];
+const ESTADOS=['pend','parcial','ok'];
+const EMOJIS={pend:'○',parcial:'◑',ok:'●'};
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+const EMPRESAS_INIT=[
+  {cod:'3',   nom:'MOYRESUR, S.L.',                    tipo:'autonomo'},
+  {cod:'23',  nom:'MURAS I.T., S.A.L.',                tipo:'autonomo'},
+  {cod:'32',  nom:'FM DELEGACIONES REUNIDAS, S.L.',    tipo:'autonomo'},
+  {cod:'33',  nom:'FINCAS ISPAL, S.L.U.',              tipo:'autonomo'},
+  {cod:'41',  nom:'ALEASEN INVERSIONES, S.L.',         tipo:'autonomo'},
+  {cod:'42',  nom:'LOPEZ DE CASTRO ALONSO, BEATRIZ',   tipo:'autonomo'},
+  {cod:'43',  nom:'EYN HOMES & IT, S.L.',              tipo:'autonomo'},
+  {cod:'47',  nom:'INMUEBLES CONPER, S.L.',            tipo:'autonomo'},
+  {cod:'2150',nom:'ANDRADES MONTERO, RUBEN',           tipo:'autonomo'},
+  {cod:'49',  nom:'ROCA-REY RUIZ, MARIA ESPERANZA',    tipo:'hogar'},
+  {cod:'8',   nom:'BLANCO BONILLA, MARIATERESA',       tipo:'hogar'},
+  {cod:'6',   nom:'MENENDEZ PRIETO, MIRYAM',           tipo:'completo'},
+  {cod:'25',  nom:'VILLANUEVA MATO, JUAN CARLOS',      tipo:'completo'},
+  {cod:'27',  nom:'TLS NEW LOGISTIC SERVICES, S.L.',   tipo:'completo'},
+  {cod:'31',  nom:'SORIASORIANO, ANGELA',              tipo:'completo'},
+  {cod:'34',  nom:'MBE SANTA MARIA, S.L.',             tipo:'completo'},
+  {cod:'36',  nom:'FINCA LA PAÑOLETA, S.L.',           tipo:'completo'},
+  {cod:'37',  nom:'UNIFICA 2003, S.L.',                tipo:'completo'},
+  {cod:'40',  nom:'GRUPO EMPRESARIAL ARANGO, S.L.U.',  tipo:'completo'},
+  {cod:'46',  nom:'ITURRIAGA ROQUE, JULIO',            tipo:'completo'},
+  {cod:'1007',nom:'GRUPO ALONSO CUEVAS AC',            tipo:'completo'},
+  {cod:'1036',nom:'DESARROLLOS INFORMATICOS',          tipo:'completo'},
+  {cod:'1042',nom:'GINECOLOGIA Y SALUD, S.L.',         tipo:'completo'},
+  {cod:'1062',nom:'SAYAGO MARQUEZ, MARIA',             tipo:'completo'},
+  {cod:'1117',nom:'CLUB BALONCESTO MACASTA',           tipo:'completo'},
+  {cod:'1119',nom:'MORENO ARANDA, JUAN ANTONIO',       tipo:'completo'},
+  {cod:'1121',nom:'MACELES A SERVICIOS PROFESIONALES', tipo:'completo'},
+  {cod:'1123',nom:'SAINZ SAINZ, INMACULADA',           tipo:'completo'},
+  {cod:'1144',nom:'NEGRETE MORALES, JUAN MANUEL',      tipo:'completo'},
+];
+
+const EMP_KEY='nominas_html_v1';
+const now=new Date();
+let mesSel=now.getMonth(),anioSel=now.getFullYear();
+
+function loadEmpresas(){try{const s=localStorage.getItem(EMP_KEY);if(s)return JSON.parse(s);}catch(e){}return EMPRESAS_INIT.map(e=>({...e}));}
+let empresas=loadEmpresas();
+function saveEmpresas(){try{localStorage.setItem(EMP_KEY,JSON.stringify(empresas));}catch(e){}}
+
+const DB_KEY=()=>`nominas_html_${anioSel}_${mesSel}`;
+function getData(){try{return JSON.parse(localStorage.getItem(DB_KEY())||'null')||{};}catch(e){return{};}}
+function saveData(d){try{localStorage.setItem(DB_KEY(),JSON.stringify(d));}catch(e){}}
+
+function getFases(tipo){return tipo==='completo'?FASES_SS:FASES_SIMPLE;}
+function getEstado(data,cod,fase){return(data[cod]&&data[cod][fase])||'pend';}
+function getImporte(data,cod){return(data[cod]&&data[cod]['_importe'])||'';}
+function setImporte(data,cod,val){if(!data[cod])data[cod]={};data[cod]['_importe']=val;saveData(data);}
+function cycleEstado(data,cod,fase){
+  if(!data[cod])data[cod]={};
+  const cur=data[cod][fase]||'pend';
+  data[cod][fase]=ESTADOS[(ESTADOS.indexOf(cur)+1)%ESTADOS.length];
+  saveData(data);
+}
+function calcPct(data,e){
+  const fases=getFases(e.tipo);let done=0;
+  fases.forEach(f=>{if(getEstado(data,e.cod,f)==='ok')done++;});
+  return Math.round(done/fases.length*100);
+}
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+function renderStats(data){
+  const total=empresas.length;let completas=0,sinIniciar=0;
+  empresas.forEach(e=>{const p=calcPct(data,e);if(p===100)completas++;if(p===0)sinIniciar++;});
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="lbl">Total clientes</div><div class="val">${total}</div></div>
+    <div class="stat"><div class="lbl">Completados</div><div class="val ok">${completas}</div></div>
+    <div class="stat"><div class="lbl">En proceso</div><div class="val warn">${total-completas-sinIniciar}</div></div>
+    <div class="stat"><div class="lbl">Sin iniciar</div><div class="val err">${sinIniciar}</div></div>`;
+}
+
+function makeRowSimple(e,data,buscar){
+  if(!(e.nom.toLowerCase()+e.cod).includes(buscar))return'';
+  const pct=calcPct(data,e);
+  const fill=pct===100?'#82c991':pct>0?'#f0c040':'#ccc';
+  const cols=FASES_SIMPLE.map(f=>{const est=getEstado(data,e.cod,f);return`<td style="text-align:center"><button class="chip ${est}" onclick="toggle(event,'${escH(e.cod)}','${f}')">${EMOJIS[est]}</button></td>`;}).join('');
+  return`<tr>
+    <td style="color:#888;font-size:11px">${escH(e.cod)}</td>
+    <td style="font-weight:500">${escH(e.nom)}</td>
+    ${cols}
+    <td style="text-align:center"><div class="pct">${pct}%</div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fill}"></div></div></td>
+    <td style="text-align:center"><button class="del-btn" onclick="delEmpresa('${escH(e.cod)}')" title="Dar de baja">✕</button></td>
+  </tr>`;
+}
+
+function makeRowSS(e,data,buscar){
+  if(!(e.nom.toLowerCase()+e.cod).includes(buscar))return'';
+  const pct=calcPct(data,e);
+  const fill=pct===100?'#82c991':pct>0?'#f0c040':'#ccc';
+  const importe=escH(getImporte(data,e.cod));
+  const chips=FASES_SS.map(f=>{const est=getEstado(data,e.cod,f);return`<td style="text-align:center"><button class="chip ${est}" onclick="toggle(event,'${escH(e.cod)}','${f}')">${EMOJIS[est]}</button></td>`;});
+  const chipsHTML=chips[0]+chips[1]+chips[2]+chips[3]+
+    `<td style="text-align:center"><input class="importe-input" type="text" placeholder="0,00 €" value="${importe}" onchange="updateImporte('${escH(e.cod)}',this.value)" onclick="event.stopPropagation()"></td>`+
+    chips[4];
+  return`<tr>
+    <td style="color:#888;font-size:11px">${escH(e.cod)}</td>
+    <td style="font-weight:500">${escH(e.nom)}</td>
+    ${chipsHTML}
+    <td style="text-align:center"><div class="pct">${pct}%</div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fill}"></div></div></td>
+    <td style="text-align:center"><button class="del-btn" onclick="delEmpresa('${escH(e.cod)}')" title="Dar de baja">✕</button></td>
+  </tr>`;
+}
+
+function updateImporte(cod,val){const data=getData();setImporte(data,cod,val);}
+
+function renderTable(){
+  const data=getData();
+  const buscar=document.getElementById('buscar').value.toLowerCase();
+  const filtro=document.getElementById('filtroEstado').value;
+  renderStats(data);
+  let autoList=empresas.filter(e=>e.tipo==='autonomo');
+  let hogarList=empresas.filter(e=>e.tipo==='hogar');
+  let ssList=empresas.filter(e=>e.tipo==='completo');
+  if(filtro==='pendientes'){autoList=autoList.filter(e=>calcPct(data,e)<100);hogarList=hogarList.filter(e=>calcPct(data,e)<100);ssList=ssList.filter(e=>calcPct(data,e)<100);}
+  if(filtro==='completas'){autoList=autoList.filter(e=>calcPct(data,e)===100);hogarList=hogarList.filter(e=>calcPct(data,e)===100);ssList=ssList.filter(e=>calcPct(data,e)===100);}
+  document.getElementById('cnt-auto').textContent=autoList.length+' empresas';
+  document.getElementById('cnt-hogar').textContent=hogarList.length+' clientes';
+  document.getElementById('cnt-ss').textContent=ssList.length+' empresas';
+  document.getElementById('tbody-auto').innerHTML=autoList.map(e=>makeRowSimple(e,data,buscar)).join('')||'<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:#aaa">Sin resultados</td></tr>';
+  document.getElementById('tbody-hogar').innerHTML=hogarList.map(e=>makeRowSimple(e,data,buscar)).join('')||'<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:#aaa">Sin resultados</td></tr>';
+  document.getElementById('tbody-ss').innerHTML=ssList.map(e=>makeRowSS(e,data,buscar)).join('')||'<tr><td colspan="10" style="text-align:center;padding:1.5rem;color:#aaa">Sin resultados</td></tr>';
+}
+
+function toggle(ev,cod,fase){ev.stopPropagation();const data=getData();cycleEstado(data,cod,fase);renderTable();}
+
+function toggleForm(){const f=document.getElementById('addForm');f.classList.toggle('open');if(f.classList.contains('open'))document.getElementById('nuevaEmp').focus();}
+function addEmpresa(){
+  const cod=document.getElementById('nuevaCod').value.trim();
+  const nom=document.getElementById('nuevaEmp').value.trim();
+  const tipo=document.getElementById('nuevoTipo').value;
+  if(!nom)return;
+  if(empresas.find(e=>e.nom===nom)){alert('Ya existe esa empresa');return;}
+  empresas.push({cod:cod||'—',nom,tipo});
+  saveEmpresas();
+  document.getElementById('nuevaCod').value='';
+  document.getElementById('nuevaEmp').value='';
+  toggleForm();
+  renderTable();
+}
+function delEmpresa(cod){
+  const e=empresas.find(x=>x.cod===cod);
+  if(!e)return;
+  if(!confirm('¿Dar de baja "'+e.nom+'"?'))return;
+  empresas=empresas.filter(x=>x.cod!==cod);
+  saveEmpresas();
+  renderTable();
+}
+
+function initSelects(){
+  const ms=document.getElementById('mesSelect');
+  MESES.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m;if(i===mesSel)o.selected=true;ms.appendChild(o);});
+  const as=document.getElementById('anioSelect');
+  for(let y=2024;y<=2028;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===anioSel)o.selected=true;as.appendChild(o);}
+  ms.onchange=()=>{mesSel=parseInt(ms.value);renderTable();};
+  as.onchange=()=>{anioSel=parseInt(as.value);renderTable();};
+}
+
+document.getElementById('buscar').oninput=renderTable;
+document.getElementById('filtroEstado').onchange=renderTable;
+document.getElementById('nuevaEmp').onkeydown=e=>{if(e.key==='Enter')addEmpresa();};
+initSelects();
+renderTable();
+</script>
+</body>
+</html>
